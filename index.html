@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23f9cb44'/><text y='.9em' font-size='82'>⚡</text></svg>" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="BlitzBasket — groceries delivered in minutes. Fresh fruits, vegetables, dairy, snacks and daily essentials at your doorstep in 10 minutes." />
+  <meta name="theme-color" content="#0c831f" />
+  <title>BlitzBasket — Grocery delivered in 10 minutes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="hwrap">
+      <a class="brand" href="#/">
+        <div class="brand-logo">⚡</div>
+        <div class="brand-name">Blitz<b>Basket</b></div>
+      </a>
+      <div class="loc" title="Your delivery location">
+        <div class="loc-eta">Delivery in <b>10 minutes</b></div>
+        <div class="loc-addr">📍 HSR Layout, Sector 2 · 560102</div>
+      </div>
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="q" type="text" placeholder='Search "milk", "chips", "atta"...' autocomplete="off" />
+      </div>
+      <div class="hbtns">
+        <a class="btn-ghost" href="#/orders">My Orders</a>
+        <button class="btn-login" id="loginBtn">Login</button>
+        <button class="cart-btn" id="cartBtn">
+          <div class="cart-txt">
+            <div class="cart-my">My Cart</div>
+            <div class="cart-n" id="cartN">0 items</div>
+          </div>
+          <span class="cart-ic">🛒</span>
+          <span class="cart-badge" id="cartBadge" hidden>0</span>
+        </button>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <main id="view"></main>
+
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer">
+    <div class="d-head">
+      <div class="d-title">My Cart <span id="dCount"></span></div>
+      <button class="d-close" id="dClose">✕</button>
+    </div>
+    <div class="d-body" id="dBody"></div>
+    <div class="d-foot" id="dFoot"></div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+
+  <footer class="footer">
+    <div class="fwrap">
+      <div class="f-brand"><div class="brand-logo big">⚡</div>BlitzBasket — <b>groceries in minutes</b></div>
+      <div class="f-note">Demo web app in the spirit of Blinkit / Zepto / Instamart. Payments are simulated; orders persist locally in your browser.</div>
+      <div class="f-tags">10-minute delivery · Farm-fresh quality · Best prices · 100% safety</div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
