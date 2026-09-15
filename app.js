@@ -279,6 +279,7 @@ function renderDrawer() {
 /* ---------------- Checkout ---------------- */
 function openCheckout() {
   const b = bill();
+  // Show payment method selection first
   const modal = document.createElement('div');
   modal.className = 'modal'; modal.id = 'ckModal';
   modal.innerHTML = `<div class="mcard">
@@ -306,26 +307,112 @@ function openCheckout() {
   const close = () => { modal.classList.remove('show'); setTimeout(() => modal.remove(), 150); };
   modal.addEventListener('click', e => { if (e.target === modal) close(); });
   $('#ckCancel').onclick = close;
-  $('#ckOk').onclick = () => {
+
+  $('#ckOk').onclick = async () => {
     const name = $('#ckName').value.trim(), phone = $('#ckPhone').value.trim(), addr = $('#ckAddr').value.trim();
     if (name.length < 2) return toast('Please enter your name');
     if (!/^\d{10}$/.test(phone)) return toast('Enter a valid 10-digit phone number');
     if (addr.length < 8) return toast('Please enter your full delivery address');
-    const orders = store.orders;
-    const id = String(Date.now()).slice(-6);
-    const c = store.cart;
-    orders.push({
-      id, name, phone, addr, payLabel: pay,
-      date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }),
-      placedAt: Date.now(), eta: '10 mins',
-      items: Object.keys(c).filter(k => c[k] > 0).map(k => ({ name: byId(k).name, emoji: byId(k).emoji, qty: c[k], price: byId(k).price })),
-      total: b.total,
+
+    // For COD, just save order directly
+    if (pay === 'COD') {
+      const orders = store.orders;
+      const id = String(Date.now()).slice(-6);
+      const c = store.cart;
+      orders.push({
+        id, name, phone, addr, payLabel: pay,
+        date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }),
+        placedAt: Date.now(), eta: '10 mins',
+        items: Object.keys(c).filter(k => c[k] > 0).map(k => ({ name: byId(k).name, emoji: byId(k).emoji, qty: c[k], price: byId(k).price })),
+        total: b.total,
+      });
+      store.orders = orders;
+      store.cart = {}; coupon = { code: null };
+      syncHeader(); closeDrawer(); close(); renderHome();
+      location.hash = '#/orders';
+      toast('✓ Order placed! COD order — Rider assigned — arriving in 10 minutes');
+      return;
+    }
+
+    // Razorpay flow for UPI/Card
+    const cpn = COUPONS[coupon.code] || { type: 'flat', value: 0, min: 0 };
+    const orderAmount = b.total; // amount in INR (paise will be multiplied by 100 in API)
+    
+    // Create Razorpay order
+    const createRes = await fetch('/api/razorpay/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: orderAmount })
     });
-    store.orders = orders;
-    store.cart = {}; coupon = { code: null };
-    syncHeader(); closeDrawer(); close(); renderHome();
-    location.hash = '#/orders';
-    toast('✓ Order placed! Rider assigned — arriving in 10 minutes');
+    const orderData = await createRes.json();
+    if (!orderData.id) {
+      toast('❌ Could not create Razorpay order: ' + (orderData.error || 'unknown'));
+      return;
+    }
+
+    // Initialize Razorpay client
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => {
+      // Fetch publishable key from our minimal API (keeps secret secure)
+      fetch('/api/razorpay/key').then(async r => {
+        const { key_id } = await r.json();
+        const rzp = new Razorpay({ key_id });
+        rzp.open({
+          order_id: orderData.id,
+          currency: 'INR',
+          amount: orderAmount * 100, // Razorpay expects paise
+          receipt: orderData.receipt,
+          handler: function (response) {
+            // Verify payment signature
+            fetch('/api/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            }).then(async verRes => {
+              const verData = await verRes.json();
+              if (verData.status === 'valid') {
+                // Save order to localStorage
+                const orders = store.orders;
+                const id = String(Date.now()).slice(-6);
+                const c = store.cart;
+                orders.push({
+                  id, name, phone, addr, payLabel: pay,
+                  date: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }),
+                  placedAt: Date.now(), eta: '10 mins',
+                  items: Object.keys(c).filter(k => c[k] > 0).map(k => ({ name: byId(k).name, emoji: byId(k).emoji, qty: c[k], price: byId(k).price })),
+                  total: b.total,
+                });
+                store.orders = orders;
+                store.cart = {}; coupon = { code: null };
+                syncHeader(); closeDrawer(); close(); renderHome();
+                location.hash = '#/orders';
+                toast('✓ Payment successful! Order placed — Rider assigned — arriving in 10 minutes');
+              } else {
+                toast('❌ Payment verification failed. Please try again.');
+              }
+            }).catch(e => {
+              toast('❌ Error verifying payment');
+              console.error(e);
+            });
+          },
+          prefill: {
+            name: name,
+            email: name.toLowerCase() + '@example.com',
+            contact: phone
+          },
+          notes: {
+            address: addr,
+            merchant_order_id: id
+          }
+        });
+      });
+    };
+    document.body.appendChild(script);
   };
 }
 
